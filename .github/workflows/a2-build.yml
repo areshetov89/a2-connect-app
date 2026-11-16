@@ -28,9 +28,6 @@ jobs:
             os: windows-2022
             arch: amd64
           - platform: macos
-            os: macos-14
-            arch: arm64
-          - platform: macos
             os: macos-15-intel
             arch: amd64
     steps:
@@ -142,7 +139,7 @@ jobs:
         run: |
           mkdir out
           ls -la dist
-          pick() { f=$(ls dist | grep -E "$1" | head -1); if [ -n "$f" ]; then cp "dist/$f" "out/$2"; echo "$f -> $2"; else echo "missing: $2"; fi; }
+          pick() { f=$(ls dist | grep -E "$1" | head -1 || true); if [ -n "$f" ]; then cp "dist/$f" "out/$2"; echo "$f -> $2"; else echo "missing: $2"; fi; }
           pick 'arm64-v8a.*\.apk$' A2Connect.apk
           pick 'armeabi-v7a.*\.apk$' A2Connect-armv7.apk
           pick 'windows.*amd64.*\.exe$|amd64.*setup\.exe$|\.exe$' A2Connect-Setup.exe
