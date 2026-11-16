@@ -39,10 +39,11 @@ jobs:
           submodules: recursive
 
       - name: Setup Android signing
-        if: matrix.platform == 'android' && env.KEYSTORE != ''
+        if: matrix.platform == 'android'
         env:
           KEYSTORE: ${{ secrets.KEYSTORE }}
         run: |
+          if [ -z "$KEYSTORE" ]; then echo "no keystore secret"; exit 0; fi
           echo "$KEYSTORE" | base64 --decode > android/app/keystore.jks
           {
             echo "keyAlias=${{ secrets.KEY_ALIAS }}"
