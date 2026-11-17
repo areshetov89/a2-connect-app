@@ -5,10 +5,13 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'common.dart';
 
 extension PackageInfoExtension on PackageInfo {
+  // Remnawave picks the config format by the start of the User-Agent, so a
+  // known Mihomo client name must come first.
   String get ua => [
+    'clash-verge/v2.4.0',
+    'FlClash/v$version',
+    'mihomo',
     '$appName/v$version',
-    'FlClash',
-    'clash-verge',
     'Platform/${Platform.operatingSystem}',
   ].join(' ');
 }
