@@ -280,7 +280,6 @@ TextStyle get _baseText => TextStyle(
   decoration: TextDecoration.none,
   fontWeight: FontWeight.w400,
   fontFamily: a2FontFamily,
-  fontFamilyFallback: const ['Twemoji'],
 );
 
 class _Header extends StatelessWidget {
@@ -575,7 +574,10 @@ class _CountryRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text(_flag(name), style: const TextStyle(fontSize: 22)),
+              Text(
+                _flag(name),
+                style: const TextStyle(fontSize: 22, fontFamily: 'Twemoji'),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
