@@ -9,6 +9,8 @@ on:
 jobs:
   screens:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,3 +29,9 @@ jobs:
         with:
           name: a2-screens
           path: test/a2/goldens/*.png
+      - name: Publish screens to branch
+        run: |
+          mkdir /tmp/s && cp test/a2/goldens/*.png /tmp/s/
+          cd /tmp/s && git init -q && git checkout -q -b screens
+          git add . && git -c user.name=ci -c user.email=ci@a2-connect.com commit -qm "screens ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" screens
