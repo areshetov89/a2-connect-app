@@ -475,13 +475,9 @@ class _BigButton extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '⏻',
-              style: TextStyle(
-                color: isStart ? _black : _yellow,
-                fontSize: 54,
-                height: 1,
-              ),
+            CustomPaint(
+              size: const Size(56, 56),
+              painter: _PowerIconPainter(isStart ? _black : _yellow),
             ),
             const SizedBox(height: 8),
             Text(
@@ -497,6 +493,39 @@ class _BigButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PowerIconPainter extends CustomPainter {
+  const _PowerIconPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.1
+      ..strokeCap = StrokeCap.round;
+    final center = Offset(size.width / 2, size.height * 0.55);
+    final radius = size.width * 0.38;
+    const gap = 0.9;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -1.5708 + gap / 2 + 0.25,
+      6.2832 - gap - 0.5,
+      false,
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width / 2, size.height * 0.08),
+      Offset(size.width / 2, size.height * 0.5),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PowerIconPainter old) => old.color != color;
 }
 
 class _CountryRow extends StatelessWidget {
