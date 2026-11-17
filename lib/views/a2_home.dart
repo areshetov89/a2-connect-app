@@ -8,6 +8,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/views/a2_api.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -224,6 +225,13 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
     final groups = ref.watch(groupsProvider);
     final group = _mainGroup(groups);
     final profile = ref.watch(currentProfileProvider);
+    final selected = group == null
+        ? null
+        : ref.watch(selectedProxyNameProvider(group.name));
+    final delays = <String, int?>{
+      for (final proxy in group?.all ?? const <Proxy>[])
+        proxy.name: ref.watch(delayProvider(proxyName: proxy.name)),
+    };
 
     return DefaultTextStyle(
       style: _baseText,
@@ -238,6 +246,8 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
                   ? _ConnectedBody(
                       isStart: isStart,
                       group: group,
+                      selected: selected,
+                      delays: delays,
                       profile: profile,
                       onToggle: _toggle,
                       onSelect: _select,
@@ -260,11 +270,17 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
   }
 }
 
-const _baseText = TextStyle(
+/// Overridden only by the screenshot test, which has no system font.
+@visibleForTesting
+String? a2FontFamily;
+
+TextStyle get _baseText => TextStyle(
   color: _white,
   fontSize: 15,
   decoration: TextDecoration.none,
   fontWeight: FontWeight.w400,
+  fontFamily: a2FontFamily,
+  fontFamilyFallback: const ['Twemoji'],
 );
 
 class _Header extends StatelessWidget {
@@ -320,10 +336,12 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _ConnectedBody extends ConsumerWidget {
+class _ConnectedBody extends StatelessWidget {
   const _ConnectedBody({
     required this.isStart,
     required this.group,
+    required this.selected,
+    required this.delays,
     required this.profile,
     required this.onToggle,
     required this.onSelect,
@@ -332,16 +350,16 @@ class _ConnectedBody extends ConsumerWidget {
 
   final bool isStart;
   final Group? group;
+  final String? selected;
+  final Map<String, int?> delays;
   final Profile? profile;
   final VoidCallback onToggle;
   final void Function(Group group, String proxyName) onSelect;
   final VoidCallback onRefresh;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selected = group == null
-        ? null
-        : ref.watch(selectedProxyNameProvider(group!.name));
+  Widget build(BuildContext context) {
+    final selected = this.selected;
     final expire = profile?.subscriptionInfo?.expire ?? 0;
     String? daysLeft;
     if (expire > 0) {
@@ -409,6 +427,7 @@ class _ConnectedBody extends ConsumerWidget {
           for (final proxy in group!.all)
             _CountryRow(
               name: proxy.name,
+              delay: delays[proxy.name],
               selected: proxy.name == selected,
               onTap: () => onSelect(group!, proxy.name),
             ),
@@ -480,20 +499,22 @@ class _BigButton extends StatelessWidget {
   }
 }
 
-class _CountryRow extends ConsumerWidget {
+class _CountryRow extends StatelessWidget {
   const _CountryRow({
     required this.name,
+    required this.delay,
     required this.selected,
     required this.onTap,
   });
 
   final String name;
+  final int? delay;
   final bool selected;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final delay = ref.watch(delayProvider(proxyName: name));
+  Widget build(BuildContext context) {
+    final delay = this.delay;
     final String delayText;
     final Color delayColor;
     if (delay == null) {
@@ -951,4 +972,59 @@ String _flag(String name) {
     if (n.contains(entry.key)) return entry.value;
   }
   return '🌐';
+}
+
+
+/// Screens with sample data for the screenshot check in CI.
+@visibleForTesting
+Widget a2Preview({required String screen}) {
+  final group = Group(
+    type: GroupType.Selector,
+    name: 'A2',
+    all: const [
+      Proxy(name: '🇫🇮 Финляндия', type: 'vless'),
+      Proxy(name: '🇩🇪 Германия', type: 'vless'),
+      Proxy(name: '🇸🇪 Швеция', type: 'vless'),
+      Proxy(name: '🇺🇸 США', type: 'vless'),
+      Proxy(name: '🇷🇺 Россия', type: 'vless'),
+    ],
+  );
+  final Widget body = switch (screen) {
+    'login' => _Onboarding(
+      busy: false,
+      message: null,
+      onPaste: () {},
+      onTelegram: () {},
+      onBrowser: () {},
+      onEmail: (_, _) {},
+    ),
+    _ => _ConnectedBody(
+      isStart: screen == 'on',
+      group: group,
+      selected: '🇫🇮 Финляндия',
+      delays: const {
+        '🇫🇮 Финляндия': 48,
+        '🇩🇪 Германия': 62,
+        '🇸🇪 Швеция': 71,
+        '🇺🇸 США': 154,
+        '🇷🇺 Россия': -1,
+      },
+      profile: null,
+      onToggle: () {},
+      onSelect: (_, _) {},
+      onRefresh: () {},
+    ),
+  };
+  return DefaultTextStyle(
+    style: _baseText,
+    child: ColoredBox(
+      color: _black,
+      child: Column(
+        children: [
+          _Header(onSettings: () {}),
+          Expanded(child: body),
+        ],
+      ),
+    ),
+  );
 }
