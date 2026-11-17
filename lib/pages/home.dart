@@ -4,6 +4,7 @@ import 'package:fl_clash/manager/app_manager.dart';
 import 'package:fl_clash/models/common.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/ui/icons/icons.dart';
+import 'package:fl_clash/views/a2_home.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -23,6 +24,24 @@ class HomePage extends ConsumerWidget {
     if (!hasViewSize) {
       return ColoredBox(color: SurfaceLevel.page.colorOf(context.colorScheme));
     }
+    return ValueListenableBuilder<bool>(
+      valueListenable: a2SimpleMode,
+      builder: (context, simple, _) => simple
+          ? const A2HomeView()
+          : Stack(
+              children: [
+                Positioned.fill(child: _fullHome(context, ref)),
+                const PositionedDirectional(
+                  end: 16,
+                  bottom: 16,
+                  child: A2BackButton(),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _fullHome(BuildContext context, WidgetRef ref) {
     return HomeBackScopeContainer(
       child: AppSidebarContainer(
         child: _HomeShell(

@@ -224,9 +224,10 @@ class Bootstrap {
 
   /// Unattended desktop installs, such as a container nobody watches, accept
   /// up front: the core only starts after the disclaimer is accepted.
-  bool get _isDisclaimerAcceptedByEnvironment =>
-      system.isDesktop &&
-      Platform.environment['FLCLASH_ACCEPT_DISCLAIMER'] == '1';
+  ///
+  /// A2 Connect is the service itself: its own terms are accepted in the
+  /// A2 Connect cabinet, so the generic client disclaimer is not shown.
+  bool get _isDisclaimerAcceptedByEnvironment => true;
 
   /// Android's exit only finishes the activity, so Dart keeps running after
   /// [SystemAction.handleExit] returns and must not go on to start the app.

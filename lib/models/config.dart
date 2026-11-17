@@ -336,7 +336,7 @@ abstract class WindowProps with _$WindowProps {
 
 /// Four dashboard columns at full density beside the expanded sidebar, with
 /// room for the Windows and Linux title bar.
-const defaultWindowSize = Size(1280, 880);
+const defaultWindowSize = Size(420, 720);
 
 extension WindowPropsExt on WindowProps {
   Size? get savedSize {

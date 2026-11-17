@@ -52,7 +52,8 @@ class Window implements WindowPort {
     if (!system.isMacOS || version > 10) {
       await desktopWindow.setTitleBarStyle(TitleBarStyle.hidden);
     }
-    await desktopWindow.setSize(props.savedSize ?? await _defaultSize());
+    // A2 Connect always opens as a compact window.
+    await desktopWindow.setSize(await _defaultSize());
     await desktopWindow.setMinimumSize(const Size(380, 400));
     await _windowPosition(props);
     await desktopWindow.setPreventClose(true);

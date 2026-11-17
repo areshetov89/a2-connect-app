@@ -56,7 +56,8 @@ ColorScheme genColorScheme(
   final Color seedColor;
   if (color == null &&
       (ignoreConfig == true || themeSetting.primaryColor == null)) {
-    seedColor = dynamicColor.seedOf(brightness);
+    // A2 Connect keeps its own yellow instead of the system accent.
+    seedColor = const Color(defaultPrimaryColor);
   } else {
     seedColor = color ?? Color(themeSetting.primaryColor!);
   }
@@ -64,7 +65,7 @@ ColorScheme genColorScheme(
     seedColor,
     brightness,
     themeSetting.colorStyle,
-    pureBlack ?? themeSetting.pureBlack,
+    pureBlack ?? true,
   );
 }
 
