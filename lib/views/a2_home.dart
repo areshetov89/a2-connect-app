@@ -7,6 +7,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
+import 'package:fl_clash/views/a2_api.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +24,7 @@ const _white = Color(0xFFFFFFFF);
 const _green = Color(0xFF3DDC84);
 const _red = Color(0xFFFF5A5A);
 
-const _cabinetUrl = 'https://lk.a2-connect.com';
+const _cabinetUrl = a2CabinetUrl;
 
 class A2HomeView extends ConsumerStatefulWidget {
   const A2HomeView({super.key});
@@ -111,6 +112,70 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
     }
   }
 
+  Future<void> _addSubscription(String url) async {
+    await ref
+        .read(profilesActionProvider.notifier)
+        .addProfileFromLink(url, label: 'A2 Connect');
+    a2SimpleMode.value = true;
+    await ref.read(proxiesActionProvider.notifier).updateGroups();
+    _testDelays();
+  }
+
+  Future<void> _afterLogin() async {
+    var url = await A2Api.instance.subscriptionUrl();
+    if (url == null) {
+      if (await A2Api.instance.activateTrial()) {
+        url = await A2Api.instance.subscriptionUrl();
+      }
+    }
+    if (url == null) {
+      setState(
+        () => _message =
+            'Вы вошли, но у вас пока нет подписки. Оформите её в личном '
+            'кабинете — и нажмите «Войти» ещё раз.',
+      );
+      return;
+    }
+    await _addSubscription(url);
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await action();
+    } on A2AuthException catch (e) {
+      if (mounted) setState(() => _message = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _message = 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _loginTelegram() => _run(() async {
+    final login = await A2Api.instance.startTelegramLogin();
+    await dialogs.openUrl(login.link);
+    if (mounted) {
+      setState(
+        () => _message = 'Нажмите «Старт» в боте Telegram и вернитесь сюда…',
+      );
+    }
+    await login.done;
+    await _afterLogin();
+  });
+
+  void _loginEmail(String email, String password) => _run(() async {
+    await A2Api.instance.loginEmail(email, password);
+    await _afterLogin();
+  });
+
   void _toggle() {
     ref.read(commonActionProvider.notifier).toggleRunning();
   }
@@ -131,7 +196,9 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
     final group = _mainGroup(groups);
     final profile = ref.watch(currentProfileProvider);
 
-    return ColoredBox(
+    return DefaultTextStyle(
+      style: _baseText,
+      child: ColoredBox(
       color: _black,
       child: SafeArea(
         child: Column(
@@ -151,14 +218,24 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
                       busy: _busy,
                       message: _message,
                       onPaste: _pasteLink,
+                      onTelegram: _loginTelegram,
+                      onEmail: _loginEmail,
                     ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 }
+
+const _baseText = TextStyle(
+  color: _white,
+  fontSize: 15,
+  decoration: TextDecoration.none,
+  fontWeight: FontWeight.w400,
+);
 
 class _Header extends StatelessWidget {
   const _Header({required this.onSettings});
@@ -468,36 +545,62 @@ class _CountryRow extends ConsumerWidget {
   }
 }
 
-class _Onboarding extends StatelessWidget {
+class _Onboarding extends StatefulWidget {
   const _Onboarding({
     required this.busy,
     required this.message,
     required this.onPaste,
+    required this.onTelegram,
+    required this.onEmail,
   });
 
   final bool busy;
   final String? message;
   final VoidCallback onPaste;
+  final VoidCallback onTelegram;
+  final void Function(String email, String password) onEmail;
+
+  @override
+  State<_Onboarding> createState() => _OnboardingState();
+}
+
+class _OnboardingState extends State<_Onboarding> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _emailMode = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  void _submitEmail() {
+    if (_email.text.trim().isEmpty || _password.text.isEmpty) return;
+    widget.onEmail(_email.text, _password.text);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final busy = widget.busy;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       children: [
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
         Center(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
             child: Image.asset(
               'assets/images/icon.png',
-              width: 120,
-              height: 120,
+              width: 96,
+              height: 96,
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         const Text(
-          'Добро пожаловать в A2 Connect',
+          'Вход в A2 Connect',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _white,
@@ -505,28 +608,148 @@ class _Onboarding extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         const Text(
-          '1. Откройте личный кабинет и скопируйте ссылку подписки\n'
-          '2. Нажмите «Вставить ссылку»',
+          'Войдите тем же способом, что и в личный кабинет — '
+          'страны и подписка подключатся сами',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, fontSize: 15, height: 1.5),
+          style: TextStyle(color: _muted, fontSize: 14, height: 1.45),
         ),
-        const SizedBox(height: 28),
-        _FilledButton(
-          label: busy ? 'Добавляю…' : 'Вставить ссылку',
-          onTap: busy ? null : onPaste,
-        ),
-        const SizedBox(height: 12),
-        _OutlineButton(
-          label: 'Открыть личный кабинет',
-          onTap: () => dialogs.openUrl(_cabinetUrl),
-        ),
-        if (message != null) ...[
-          const SizedBox(height: 16),
-          _Note(message!),
+        const SizedBox(height: 24),
+        if (!_emailMode) ...[
+          _FilledButton(
+            label: busy ? 'Ожидаю вход…' : 'Войти через Telegram',
+            onTap: busy ? null : widget.onTelegram,
+          ),
+          const SizedBox(height: 12),
+          _OutlineButton(
+            label: 'Войти по почте',
+            onTap: () => setState(() => _emailMode = true),
+          ),
+        ] else ...[
+          _Input(controller: _email, hint: 'Почта', keyboard: TextInputType.emailAddress),
+          const SizedBox(height: 10),
+          _Input(
+            controller: _password,
+            hint: 'Пароль',
+            obscure: true,
+            onSubmitted: _submitEmail,
+          ),
+          const SizedBox(height: 14),
+          _FilledButton(
+            label: busy ? 'Вхожу…' : 'Войти',
+            onTap: busy ? null : _submitEmail,
+          ),
+          const SizedBox(height: 12),
+          _OutlineButton(
+            label: 'Назад',
+            onTap: () => setState(() => _emailMode = false),
+          ),
         ],
+        if (widget.message != null) ...[
+          const SizedBox(height: 16),
+          _Note(widget.message!),
+        ],
+        const SizedBox(height: 28),
+        _Tap(
+          onTap: () => dialogs.openUrl(_cabinetUrl),
+          child: const Padding(
+            padding: EdgeInsets.all(6),
+            child: Text(
+              'Нет аккаунта? Зарегистрироваться',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _yellow, fontSize: 14),
+            ),
+          ),
+        ),
+        _Tap(
+          onTap: busy ? null : widget.onPaste,
+          child: const Padding(
+            padding: EdgeInsets.all(6),
+            child: Text(
+              'У меня есть ссылка подписки',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _muted, fontSize: 13),
+            ),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _Input extends StatefulWidget {
+  const _Input({
+    required this.controller,
+    required this.hint,
+    this.obscure = false,
+    this.keyboard = TextInputType.text,
+    this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final bool obscure;
+  final TextInputType keyboard;
+  final VoidCallback? onSubmitted;
+
+  @override
+  State<_Input> createState() => _InputState();
+}
+
+class _InputState extends State<_Input> {
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _focus.requestFocus,
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _line),
+        ),
+        child: Stack(
+          alignment: Alignment.centerLeft,
+          children: [
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: widget.controller,
+              builder: (_, value, _) => value.text.isEmpty
+                  ? Text(
+                      widget.hint,
+                      style: const TextStyle(color: _muted, fontSize: 15),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            EditableText(
+              controller: widget.controller,
+              focusNode: _focus,
+              obscureText: widget.obscure,
+              keyboardType: widget.keyboard,
+              autocorrect: false,
+              style: const TextStyle(
+                color: _white,
+                fontSize: 15,
+                decoration: TextDecoration.none,
+              ),
+              cursorColor: _yellow,
+              backgroundCursorColor: _muted,
+              selectionColor: _yellow.withValues(alpha: 0.35),
+              onSubmitted: (_) => widget.onSubmitted?.call(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -645,7 +868,9 @@ class A2BackButton extends StatelessWidget {
         ),
         child: const Text(
           '← A2',
+          textDirection: TextDirection.ltr,
           style: TextStyle(
+            decoration: TextDecoration.none,
             color: _black,
             fontSize: 14,
             fontWeight: FontWeight.w800,
