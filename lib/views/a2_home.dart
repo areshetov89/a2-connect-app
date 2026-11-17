@@ -618,14 +618,16 @@ class _OnboardingState extends State<_Onboarding> {
         const SizedBox(height: 24),
         if (!_emailMode) ...[
           _FilledButton(
-            label: busy ? 'Ожидаю вход…' : 'Войти через Telegram',
-            onTap: busy ? null : widget.onTelegram,
+            label: 'Войти по почте',
+            onTap: busy ? null : () => setState(() => _emailMode = true),
           ),
           const SizedBox(height: 12),
           _OutlineButton(
-            label: 'Войти по почте',
-            onTap: () => setState(() => _emailMode = true),
+            label: busy ? 'Ожидаю вход…' : 'Войти через Telegram',
+            onTap: busy ? () {} : widget.onTelegram,
           ),
+          const SizedBox(height: 8),
+          const _Note('Через Telegram — если он у вас открывается без VPN'),
         ] else ...[
           _Input(controller: _email, hint: 'Почта', keyboard: TextInputType.emailAddress),
           const SizedBox(height: 10),
