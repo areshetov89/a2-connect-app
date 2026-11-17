@@ -423,7 +423,7 @@ class _ConnectedBody extends StatelessWidget {
         if (group == null)
           const _Note('Список стран появится через несколько секунд…')
         else
-          for (final proxy in group!.all)
+          for (final proxy in group!.all.where((p) => _isServer(p.name)))
             _CountryRow(
               name: proxy.name,
               delay: delays[proxy.name],
@@ -1059,3 +1059,10 @@ Widget a2Preview({required String screen}) {
     ),
   );
 }
+
+const _serviceNames = {
+  'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE', 'GLOBAL',
+};
+
+/// Mihomo's built-in outbounds are not countries the user can pick.
+bool _isServer(String name) => !_serviceNames.contains(name.trim().toUpperCase());
