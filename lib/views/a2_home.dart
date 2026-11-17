@@ -37,10 +37,16 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
   bool _busy = false;
   String? _message;
   Timer? _delayTimer;
+  StreamSubscription<Uri>? _authSub;
 
   @override
   void initState() {
     super.initState();
+    _authSub = a2AuthLinks.stream.listen(_onAuthLink);
+    final pending = a2PendingAuthLink;
+    if (pending != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onAuthLink(pending));
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(proxiesActionProvider.notifier).updateGroups();
       _testDelays();
@@ -58,6 +64,7 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
   @override
   void dispose() {
     _delayTimer?.cancel();
+    unawaited(_authSub?.cancel());
     super.dispose();
   }
 
@@ -171,6 +178,28 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
     await _afterLogin();
   });
 
+  void _onAuthLink(Uri uri) {
+    a2PendingAuthLink = null;
+    final rt = uri.queryParameters['rt'];
+    if (rt == null || rt.isEmpty || !mounted) return;
+    if (ref.read(profilesProvider).isNotEmpty) return;
+    _run(() async {
+      await A2Api.instance.loginWithRefreshToken(rt);
+      await _afterLogin();
+    });
+  }
+
+  void _loginBrowser() => _run(() async {
+    await dialogs.openUrl(A2Api.instance.browserLoginUrl);
+    if (mounted) {
+      setState(
+        () => _message =
+            'Войдите в открывшемся кабинете (Google, почта или Telegram). '
+            'После входа браузер предложит открыть A2 Connect — нажмите «Открыть».',
+      );
+    }
+  });
+
   void _loginEmail(String email, String password) => _run(() async {
     await A2Api.instance.loginEmail(email, password);
     await _afterLogin();
@@ -219,6 +248,7 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
                       message: _message,
                       onPaste: _pasteLink,
                       onTelegram: _loginTelegram,
+                      onBrowser: _loginBrowser,
                       onEmail: _loginEmail,
                     ),
             ),
@@ -551,9 +581,11 @@ class _Onboarding extends StatefulWidget {
     required this.message,
     required this.onPaste,
     required this.onTelegram,
+    required this.onBrowser,
     required this.onEmail,
   });
 
+  final VoidCallback onBrowser;
   final bool busy;
   final String? message;
   final VoidCallback onPaste;
@@ -618,16 +650,19 @@ class _OnboardingState extends State<_Onboarding> {
         const SizedBox(height: 24),
         if (!_emailMode) ...[
           _FilledButton(
-            label: 'Войти по почте',
-            onTap: busy ? null : () => setState(() => _emailMode = true),
+            label: 'Войти через Google (Gmail)',
+            onTap: busy ? null : widget.onBrowser,
+          ),
+          const SizedBox(height: 12),
+          _OutlineButton(
+            label: 'Войти по почте и паролю',
+            onTap: () => setState(() => _emailMode = true),
           ),
           const SizedBox(height: 12),
           _OutlineButton(
             label: busy ? 'Ожидаю вход…' : 'Войти через Telegram',
             onTap: busy ? () {} : widget.onTelegram,
           ),
-          const SizedBox(height: 8),
-          const _Note('Через Telegram — если он у вас открывается без VPN'),
         ] else ...[
           _Input(controller: _email, hint: 'Почта', keyboard: TextInputType.emailAddress),
           const SizedBox(height: 10),

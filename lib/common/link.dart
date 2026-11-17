@@ -36,6 +36,10 @@ String? _installConfigUrl(Uri uri) {
   return url == null || url.isEmpty ? null : url;
 }
 
+/// `a2connect://auth?rt=…` handed over by the A2 cabinet after a browser login.
+final a2AuthLinks = StreamController<Uri>.broadcast();
+Uri? a2PendingAuthLink;
+
 class LinkManager {
   static LinkManager? _instance;
   StreamSubscription? subscription;
@@ -72,7 +76,12 @@ class LinkManager {
   }
 
   void _handle(Uri uri, Function(String url) installConfigCallBack) {
-    commonPrint.log('onAppLink: $uri');
+    commonPrint.log('onAppLink: ${uri.scheme}://${uri.host}');
+    if (uri.host == 'auth') {
+      a2PendingAuthLink = uri;
+      a2AuthLinks.add(uri);
+      return;
+    }
     final url = _installConfigUrl(uri);
     if (url != null) {
       installConfigCallBack(url);

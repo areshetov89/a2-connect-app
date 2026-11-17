@@ -92,6 +92,24 @@ class A2Api {
     throw A2AuthException(_errorText(res, 'Неверная почта или пароль'));
   }
 
+  /// Login handed over from the browser cabinet (Google, Telegram widget…).
+  Future<void> loginWithRefreshToken(String refreshToken) async {
+    final res = await _dio.post(
+      '/auth/refresh',
+      data: {'refresh_token': refreshToken},
+    );
+    if (res.statusCode == 200 && res.data is Map) {
+      final data = Map<String, dynamic>.from(res.data as Map);
+      data['refresh_token'] ??= refreshToken;
+      await _saveTokens(data);
+      return;
+    }
+    throw A2AuthException('Не удалось войти. Попробуйте ещё раз');
+  }
+
+  /// Browser page that logs in on the cabinet and hands the session back.
+  String get browserLoginUrl => '$a2CabinetUrl/?a2app=1';
+
   Options get _auth =>
       Options(headers: {'Authorization': 'Bearer ${_accessToken ?? ''}'});
 
