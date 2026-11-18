@@ -39,11 +39,17 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
   String? _message;
   Timer? _delayTimer;
   StreamSubscription<Uri>? _authSub;
+  String? _updateUrl;
 
   @override
   void initState() {
     super.initState();
     _authSub = a2AuthLinks.stream.listen(_onAuthLink);
+    unawaited(
+      a2UpdateUrl().then((url) {
+        if (mounted && url != null) setState(() => _updateUrl = url);
+      }),
+    );
     final pending = a2PendingAuthLink;
     if (pending != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _onAuthLink(pending));
@@ -247,6 +253,8 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
         child: Column(
           children: [
             _Header(onSettings: () => a2SimpleMode.value = false),
+            if (_updateUrl != null)
+              _UpdateBanner(onTap: () => dialogs.openUrl(_updateUrl!)),
             Expanded(
               child: hasProfile
                   ? _ConnectedBody(
@@ -287,6 +295,51 @@ TextStyle get _baseText => TextStyle(
   fontWeight: FontWeight.w400,
   fontFamily: a2FontFamily,
 );
+
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _yellow),
+        ),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Доступна новая версия',
+                style: TextStyle(color: _white, fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+            ),
+            _Tap(
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _yellow,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Обновить',
+                  style: TextStyle(color: _black, fontSize: 14, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _Header extends StatelessWidget {
   const _Header({required this.onSettings});

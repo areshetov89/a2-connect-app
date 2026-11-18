@@ -2,7 +2,10 @@
 
 import 'dart:async';
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:fl_clash/views/a2_build.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const a2CabinetUrl = 'https://lk.a2-connect.com';
@@ -155,5 +158,28 @@ class A2Api {
       if (detail is String && detail.isNotEmpty) return detail;
     }
     return fallback;
+  }
+}
+
+/// A newer A2 Connect build published on GitHub, if any.
+Future<String?> a2UpdateUrl() async {
+  if (a2Build <= 0) return null;
+  try {
+    final res = await Dio().get<dynamic>(
+      'https://api.github.com/repos/areshetov89/a2-connect-app/releases/latest',
+      options: Options(validateStatus: (_) => true),
+    );
+    if (res.statusCode != 200 || res.data is! Map) return null;
+    final tag = (res.data as Map)['tag_name'] as String? ?? '';
+    final latest = int.tryParse(tag.replaceFirst('build-', '')) ?? 0;
+    if (latest <= a2Build) return null;
+    final file = Platform.isAndroid
+        ? 'A2Connect.apk'
+        : Platform.isWindows
+            ? 'A2Connect-Setup.exe'
+            : 'A2Connect-Mac-Intel.dmg';
+    return 'https://github.com/areshetov89/a2-connect-app/releases/download/$tag/$file';
+  } catch (_) {
+    return null;
   }
 }

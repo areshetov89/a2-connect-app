@@ -101,6 +101,10 @@ jobs:
           curl -fsSL --retry 3 -o "$bundle" "https://curl.se/ca/$CA_BUNDLE"
           echo "$CA_BUNDLE_SHA256  $bundle" | sha256sum -c -
 
+      - name: Stamp build number
+        shell: bash
+        run: echo "const a2Build = ${{ github.run_number }};" > lib/views/a2_build.dart
+
       - name: Build
         env:
           ANDROID_NDK_HOME: ${{ steps.build-ndk.outputs.ndk-path }}
