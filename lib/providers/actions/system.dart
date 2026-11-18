@@ -112,7 +112,8 @@ class SystemAction extends _$SystemAction {
 
   Future<void> handleClose([bool exit = true]) async {
     // A2 Connect: closing the window quits the app (and the VPN) on desktop.
-    if (!system.isDesktop && (ref.read(appSettingProvider).minimizeOnExit || !exit)) {
+    final minimize = !system.isDesktop && ref.read(appSettingProvider).minimizeOnExit;
+    if (minimize || !exit) {
       if (system.isDesktop) {
         await _savePreferencesSafely();
       }
