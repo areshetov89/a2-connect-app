@@ -19,6 +19,23 @@ done
 D=/var/www/a2/download; [ ! -f $D/A2Connect-Mac-AppleSilicon.dmg ] && [ -f $D/A2Connect-Mac-Intel.dmg ] && cp $D/A2Connect-Mac-Intel.dmg $D/A2Connect-Mac-AppleSilicon.dmg && echo '   Mac M1–M4: пока версия Intel (работает через Rosetta)'
 chmod 644 /var/www/a2/download/* 2>/dev/null || true
 
+
+echo '>> Автообновление файлов приложений (каждые 15 минут)'
+cat > /usr/local/bin/a2-app-sync <<'SYNC'
+#!/usr/bin/env bash
+REL=https://github.com/areshetov89/a2-connect-app/releases/latest/download
+D=/var/www/a2/download
+mkdir -p $D
+for f in A2Connect.apk A2Connect-armv7.apk A2Connect-Setup.exe A2Connect-Mac-Intel.dmg; do
+  curl -fsSL --max-time 600 -z "$D/$f" -o "/tmp/$f.part" "$REL/$f" && [ -s "/tmp/$f.part" ] && mv "/tmp/$f.part" "$D/$f"
+  rm -f "/tmp/$f.part"
+done
+cp -f $D/A2Connect-Mac-Intel.dmg $D/A2Connect-Mac-AppleSilicon.dmg 2>/dev/null
+chmod 644 $D/* 2>/dev/null
+SYNC
+chmod 755 /usr/local/bin/a2-app-sync
+echo '*/15 * * * * root /usr/local/bin/a2-app-sync >/dev/null 2>&1' > /etc/cron.d/a2-app-sync
+
 echo '>> Caddy'
 cp /etc/caddy/Caddyfile /etc/caddy/Caddyfile.bak
 python3 - <<'PY'
