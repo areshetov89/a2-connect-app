@@ -178,7 +178,7 @@ Future<String?> a2UpdateUrl() async {
         : Platform.isWindows
             ? 'A2Connect-Setup.exe'
             : 'A2Connect-Mac-Intel.dmg';
-    return 'https://github.com/areshetov89/a2-connect-app/releases/download/$tag/$file';
+    return 'https://a2-connect.com/download/$file';
   } catch (_) {
     return null;
   }
