@@ -49,6 +49,12 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _onAuthLink(pending));
     }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // The saved subscription may be stale (e.g. fetched by an older build),
+      // so refresh it on every start.
+      try {
+        await ref.read(profilesActionProvider.notifier).updateProfiles();
+      } catch (_) {}
+      if (!mounted) return;
       await ref.read(proxiesActionProvider.notifier).updateGroups();
       _testDelays();
     });

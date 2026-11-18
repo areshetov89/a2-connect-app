@@ -150,4 +150,4 @@ jobs:
         run: |
           tag="build-${{ github.run_number }}"
           gh release create "$tag" out/* --repo "${{ github.repository }}" \
-            --title "A2 Connect ${{ github.run_number }}" --notes "Автосборка A2 Connect" --latest
+            --title "A2 Connect ${{ github.run_number }}" --notes "Автосборка A2 Connect" --latest=false

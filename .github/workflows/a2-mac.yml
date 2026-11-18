@@ -136,5 +136,8 @@ jobs:
           f=$(ls dist | grep -E 'macos.*amd64.*\.dmg$' | head -1 || true)
           [ -n "$f" ] || { echo "no dmg"; exit 1; }
           cp "dist/$f" A2Connect-Mac-Intel.dmg
-          tag=$(gh release list --repo "${{ github.repository }}" -L 1 --json tagName -q '.[0].tagName')
+          tag=$(gh release list --repo "${{ github.repository }}" -L 1 --json tagName,createdAt -q 'sort_by(.createdAt) | reverse | .[0].tagName')
           gh release upload "$tag" A2Connect-Mac-Intel.dmg --clobber --repo "${{ github.repository }}"
+          cp A2Connect-Mac-Intel.dmg A2Connect-Mac-AppleSilicon.dmg
+          gh release upload "$tag" A2Connect-Mac-AppleSilicon.dmg --clobber --repo "${{ github.repository }}"
+          gh release edit "$tag" --latest --repo "${{ github.repository }}"
