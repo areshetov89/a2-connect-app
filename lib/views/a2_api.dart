@@ -110,6 +110,14 @@ class A2Api {
     throw A2AuthException('Не удалось войти. Попробуйте ещё раз');
   }
 
+  Future<void> logout() async {
+    _accessToken = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('a2_refresh_token');
+    } catch (_) {}
+  }
+
   /// Browser page that logs in on the cabinet and hands the session back.
   String get browserLoginUrl => '$a2CabinetUrl/?a2app=1';
 

@@ -105,6 +105,15 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
     );
   }
 
+  Future<void> _logout() async {
+    final actions = ref.read(profilesActionProvider.notifier);
+    for (final profile in [...ref.read(profilesProvider)]) {
+      await actions.deleteProfile(profile.id);
+    }
+    await A2Api.instance.logout();
+    if (mounted) setState(() => _message = null);
+  }
+
   Future<void> _pasteLink() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim() ?? '';
@@ -266,6 +275,7 @@ class _A2HomeViewState extends ConsumerState<A2HomeView> {
                       onToggle: _toggle,
                       onSelect: _select,
                       onRefresh: _testDelays,
+                      onLogout: _logout,
                     )
                   : _Onboarding(
                       busy: _busy,
@@ -404,6 +414,7 @@ class _ConnectedBody extends StatelessWidget {
     required this.onToggle,
     required this.onSelect,
     required this.onRefresh,
+    required this.onLogout,
   });
 
   final bool isStart;
@@ -414,6 +425,7 @@ class _ConnectedBody extends StatelessWidget {
   final VoidCallback onToggle;
   final void Function(Group group, String proxyName) onSelect;
   final VoidCallback onRefresh;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -496,6 +508,8 @@ class _ConnectedBody extends StatelessWidget {
           label: 'Продлить подписку',
           onTap: () => dialogs.openUrl(_cabinetUrl),
         ),
+        const SizedBox(height: 10),
+        _OutlineButton(label: 'Выйти из аккаунта', onTap: onLogout),
       ],
     );
   }
@@ -1103,6 +1117,7 @@ Widget a2Preview({required String screen}) {
       onToggle: () {},
       onSelect: (_, _) {},
       onRefresh: () {},
+      onLogout: () {},
     ),
   };
   return DefaultTextStyle(
